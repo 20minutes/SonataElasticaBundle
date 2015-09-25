@@ -40,9 +40,9 @@ class ElasticaDatagrid extends Datagrid
             return;
         }
 
+        $isGlobal = false;
         if ($this->searchForm) {
             $this->formBuilder->add('admin_search_form', $this->searchForm, array('label' => false));
-            
         } else {
             foreach ($this->getFilters() as $filter) {
                 list($type, $options) = $filter->getRenderSettings();
@@ -61,8 +61,14 @@ class ElasticaDatagrid extends Datagrid
         $this->formBuilder->add('_page', 'hidden');
         $this->formBuilder->add('_per_page', 'hidden');
 
+        // Reset global value
+        if (isset($this->values['admin_search_form']['_is_global'])) {
+            $isGlobal = true;
+            unset($this->values['admin_search_form']['_is_global']);
+        }
+
         $this->form = $this->formBuilder->getForm();
-        $this->form->bind($this->values);
+        $this->form->submit($this->values);
 
         $data = $this->form->getData();
 
@@ -84,11 +90,11 @@ class ElasticaDatagrid extends Datagrid
                 return true;
             });
 
-            foreach ($filters as $filterName => $filterValue) {
+            foreach($filters as $filterName => $filterValue) {
                 $this->query->setParameter($filterName, $filterValue);
             }
-
-        } else {
+        }
+        else {
             foreach ($this->getFilters() as $name => $filter) {
                 $this->values[$name] = isset($this->values[$name]) ? $this->values[$name] : null;
                 $filter->apply($this->query, $data[$filter->getFormName()]);
@@ -114,6 +120,9 @@ class ElasticaDatagrid extends Datagrid
         $this->pager->setMaxPerPage(isset($this->values['_per_page']) ? $this->values['_per_page'] : 25);
         $this->pager->setPage(isset($this->values['_page']) ? $this->values['_page'] : 1);
         $this->pager->setQuery($this->query);
+        if ($isGlobal) {
+            $this->query->setParameter('_is_global', true);
+        }
         $this->pager->init();
 
         $this->bound = true;
